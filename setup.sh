@@ -1,20 +1,24 @@
 #!/bin/bash
 
-echo "=== 1. Zakazuji uspávání notebooku ==="
-sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+# Exit immediately if a command exits with a non-zero status
+set -e
 
-echo "=== 2. Nastavuji Ollama síťový naslech ==="
-sudo mkdir -p /etc/systemd/system/ollama.service.d/
-echo -e "[Service]\nEnvironment=\"OLLAMA_HOST=0.0.0.0:11434\"" | sudo tee /etc/systemd/system/ollama.service.d/override.conf
-
-sudo systemctl daemon-reload
-sudo systemctl restart ollama
-
-echo "=== 3. Stahuji AI modely ==="
+echo "=== 1. Pulling Ollama models ==="
+# Pull primary LLM and embedding model for vector memory
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text
 
-echo "=== 4. Spouštím Docker službu ==="
-sudo systemctl enable --now docker
+echo "=== 2. Setting up Python environment ==="
+# Create and activate virtual environment if requirements.txt exists
+if [ -f "requirements.txt" ]; then
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+fi
 
-echo "=== Hotovo! Nyní spusťte rozhraní příkazem: docker compose up -d ==="
+echo "=== 3. Starting Docker services ==="
+# Launch Open WebUI container in background
+docker compose up -d
+
+echo "=== Setup completed successfully! ==="
