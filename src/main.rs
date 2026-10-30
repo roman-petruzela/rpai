@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use tower_http::cors::CorsLayer;
 
 use db::init_db;
-use ollama::chat_stream_handler;
+use ollama::{chat_handler, chat_stream_handler};
 
 #[tokio::main]
 async fn main() {
@@ -16,6 +16,7 @@ async fn main() {
     let db = Arc::new(Mutex::new(conn));
 
     let app = Router::new()
+        .route("/api/chat", post(chat_handler))
         .route("/api/chat/stream", post(chat_stream_handler))
         .layer(CorsLayer::permissive())
         .layer(Extension(db));

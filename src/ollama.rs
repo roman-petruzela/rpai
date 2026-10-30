@@ -20,6 +20,11 @@ pub struct ChatRequest {
     pub use_search: bool,
 }
 
+#[derive(Serialize)]
+pub struct ChatResponse {
+    pub reply: String,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct OllamaMessage {
     pub role: String,
@@ -38,6 +43,62 @@ struct OllamaStreamChunk {
     message: Option<OllamaMessage>,
 }
 
+#[derive(Deserialize)]
+struct OllamaChatResponse {
+    message: OllamaMessage,
+}
+
+// 1. Ne-streamovaný endpoint (vrací čistý JSON)
+pub async fn chat_handler(
+    Extension(db): Extension<Arc<Mutex<Connection>>>,
+    Json(payload): Json<ChatRequest>,
+) -> Result<Json<ChatResponse>, (axum::http::StatusCode, String)> {
+    save_message(&db, "user", &payload.message);
+
+    let history = load_recent_history(&db, 10);
+    let mut sys_prompt = "Jsi RPAI, pokročilý osobní AI asistent. Odpovídáš věcně, stručně a v češtině.".to_string();
+
+    if payload.use_search {
+        let search_results = search_duckduckgo(&payload.message).await;
+        sys_prompt.push_str(&format!(
+            "\n\n[AKTUÁLNÍ DATA Z INTERNETU]:\n{}\n\nINSTRUKCE: Vycházej výhradně z výše uvedených aktuálních dat.",
+            search_results
+        ));
+    }
+
+    let mut messages = vec![OllamaMessage {
+        role: "system".to_string(),
+        content: sys_prompt,
+    }];
+    messages.extend(history);
+
+    let ollama_req = OllamaChatRequest {
+        model: "llama3.1:8b".to_string(),
+        messages,
+        stream: false,
+    };
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("http://localhost:11434/api/chat")
+        .json(&ollama_req)
+        .send()
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Ollama error: {}", e)))?;
+
+    let ollama_res: OllamaChatResponse = res
+        .json()
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("JSON error: {}", e)))?;
+
+    save_message(&db, "assistant", &ollama_res.message.content);
+
+    Ok(Json(ChatResponse {
+        reply: ollama_res.message.content,
+    }))
+}
+
+// 2. Streamovaný SSE endpoint (pro webový frontend)
 pub async fn chat_stream_handler(
     Extension(db): Extension<Arc<Mutex<Connection>>>,
     Json(payload): Json<ChatRequest>,
@@ -45,12 +106,14 @@ pub async fn chat_stream_handler(
     save_message(&db, "user", &payload.message);
 
     let history = load_recent_history(&db, 10);
-
-    let mut sys_prompt = "Jsi RPAI, pokročilý osobní AI asistent na lokálním serveru. Odpovídáš věcně, stručně a v češtině.".to_string();
+    let mut sys_prompt = "Jsi RPAI, pokročilý osobní AI asistent. Odpovídáš věcně, stručně a v češtině.".to_string();
 
     if payload.use_search {
         let search_results = search_duckduckgo(&payload.message).await;
-        sys_prompt.push_str(&format!("\n\n{}", search_results));
+        sys_prompt.push_str(&format!(
+            "\n\n[AKTUÁLNÍ DATA Z INTERNETU]:\n{}\n\nINSTRUKCE: Vycházej výhradně z výše uvedených aktuálních dat.",
+            search_results
+        ));
     }
 
     let mut messages = vec![OllamaMessage {
@@ -67,7 +130,6 @@ pub async fn chat_stream_handler(
 
     let client = reqwest::Client::new();
     let req_builder = client.post("http://localhost:11434/api/chat").json(&ollama_req);
-
     let db_clone = db.clone();
 
     let stream = async_stream::stream! {
