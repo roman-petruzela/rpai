@@ -5,7 +5,26 @@ services:
     ports:
       - "3000:8080"
     environment:
+      # --- Ollama Connection ---
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - DEFAULT_MODELS=llama3.1:8b
+
+      # --- RAG & Vector Memory ---
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
+      - RAG_OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+      # --- Web Search ---
+      - ENABLE_RAG_WEB_SEARCH=true
+      - RAG_WEB_SEARCH_ENGINE=duckduckgo
+      - RAG_WEB_SEARCH_RESULT_COUNT=3
+
+      # --- Memory ---
+      - ENABLE_MEMORIES=true
+
+      # --- Security & General ---
+      - WEBUI_SECRET_KEY=a8f9c2d1e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0
+      - SHOW_ADMIN_DETAILS=false
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
