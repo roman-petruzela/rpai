@@ -1,15 +1,39 @@
-.DS_Store
+# Rust build files
+/target/
+**/*.rs.bk
+
+# SQLite database
+/rpai.db
+/rpai.db-*
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
 *.log
+/logs/
 
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# Added by cargo
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini
 
-/target
+# Temporary files
+*.tmp
+*.bak
+*.old
 
-# Database & Local Runtime
-*.db
-rpai.db
-
-# Local Runtime
-*.db
-rpai.db
+# Distribution
+/dist/
