@@ -21,7 +21,7 @@ use db::init_db;
 use ollama::{chat_handler, chat_stream_handler};
 
 const INDEX_HTML: &str = include_str!("../static/index.html");
-const DEFAULT_ADDRESS: &str = "127.0.0.1:3000";
+const DEFAULT_ADDRESS: &str = "0.0.0.0:3000";
 
 async fn index_handler() -> Html<&'static str> {
     Html(INDEX_HTML)
