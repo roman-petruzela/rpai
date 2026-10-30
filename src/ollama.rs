@@ -580,8 +580,8 @@ pub async fn chat_handler(
             )
         })?;
 
-    let reply = ollama_response.message.content;
     let metrics = OllamaMetrics::from_response(&ollama_response);
+    let reply = ollama_response.message.content;
 
     let elapsed = request_started.elapsed();
 
@@ -851,10 +851,14 @@ pub async fn chat_stream_handler(
 
                 chunk_count += 1;
 
+                let chunk_metrics = OllamaMetrics::from_stream_chunk(&chunk);
+
                 if let Some(error) = chunk.error {
                     stream_error = Some(error);
                     break 'read;
                 }
+
+                metrics = chunk_metrics;
 
                 if let Some(message) = chunk.message {
                     if !message.content.is_empty() {
@@ -890,7 +894,7 @@ pub async fn chat_stream_handler(
                 }
 
                 if chunk.done.unwrap_or(false) {
-                    metrics = OllamaMetrics::from_stream_chunk(&chunk);
+                    metrics = chunk_metrics;
                     done_received = true;
                     break 'read;
                 }
@@ -917,6 +921,7 @@ pub async fn chat_stream_handler(
                         if let Some(error) = chunk.error {
                             stream_error = Some(error);
                         } else {
+                            let chunk_metrics = OllamaMetrics::from_stream_chunk(&chunk);
                             if let Some(message) = chunk.message {
                                 if !message.content.is_empty() {
                                     if first_token_at.is_none() {
@@ -942,7 +947,7 @@ pub async fn chat_stream_handler(
                                 }
                             }
 
-                            metrics = OllamaMetrics::from_stream_chunk(&chunk);
+                            metrics = chunk_metrics;
                             done_received = chunk.done.unwrap_or(false);
                         }
                     }
