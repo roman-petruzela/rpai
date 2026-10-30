@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPAI Terminal</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 90vh; }
+    #chat { flex: 1; overflow-y: auto; background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155; white-space: pre-wrap; line-height: 1.6; margin-bottom: 15px; }
+    .input-box { display: flex; gap: 10px; }
+    input[type="text"] { flex: 1; padding: 12px; background: #1e293b; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 16px; }
+    button { padding: 12px 24px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #94a3b8; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div id="chat">RPAI připraven...</div>
+  <div class="input-box">
+    <input type="text" id="prompt" placeholder="Zadejte dotaz..." onkeydown="if(event.key==='Enter') send()">
+    <button onclick="send()">Odeslat</button>
+  </div>
+  <label><input type="checkbox" id="search" checked> Hledat na internetu</label>
+
+  <script>
+    async function send() {
+      const input = document.getElementById('prompt');
+      const box = document.getElementById('chat');
+      const useSearch = document.getElementById('search').checked;
+      if (!input.value.trim()) return;
+
+      const userText = input.value;
+      input.value = '';
+      box.innerText += `\n\nTy: ${userText}\n\nRPAI: `;
+
+      const res = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText, use_search: useSearch })
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data:')) {
+            box.innerText += line.replace('data:', '');
+            box.scrollTop = box.scrollHeight;
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
