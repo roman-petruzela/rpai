@@ -1,2 +1,11 @@
 .DS_Store
 *.log
+
+
+# Added by cargo
+
+/target
+
+# Database & Local Runtime
+*.db
+rpai.db
