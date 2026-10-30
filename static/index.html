@@ -1,57 +1,322 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RPAI Terminal</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 90vh; }
-    #chat { flex: 1; overflow-y: auto; background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155; white-space: pre-wrap; line-height: 1.6; margin-bottom: 15px; }
-    .input-box { display: flex; gap: 10px; }
-    input[type="text"] { flex: 1; padding: 12px; background: #1e293b; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 16px; }
-    button { padding: 12px 24px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #94a3b8; margin-top: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080d18">
+    <title>JARVIS — AI Terminal</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #080d18;
+            --panel: #101827;
+            --panel-2: #0c1422;
+            --border: #24334a;
+            --accent: #38bdf8;
+            --text: #e5edf8;
+            --muted: #8292a9;
+            --green: #22c55e;
+            --red: #f87171;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 22px;
+            display: flex;
+            justify-content: center;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", system-ui, sans-serif;
+        }
+        .app {
+            width: 100%;
+            max-width: 1100px;
+            height: calc(100vh - 44px);
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+        }
+        header, footer {
+            background: var(--panel);
+            border: 1px solid var(--border);
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 17px 21px;
+            border-radius: 12px 12px 0 0;
+        }
+        .brand { display: flex; align-items: center; gap: 13px; }
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            border: 1px solid #0ea5e9;
+            background: rgba(14,165,233,.12);
+            color: var(--accent);
+            font-size: 22px;
+            font-weight: 800;
+        }
+        h1 { margin: 0; font-size: 17px; letter-spacing: 3px; }
+        .subtitle { margin-top: 4px; color: var(--muted); font-size: 10px; letter-spacing: 1.5px; }
+        .status { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: 11px; letter-spacing: 1px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: var(--panel-2);
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            scroll-behavior: smooth;
+        }
+        .welcome { margin: 70px auto; text-align: center; color: var(--muted); }
+        .welcome h2 { color: var(--accent); letter-spacing: 5px; font-size: 25px; }
+        .welcome p { font-size: 13px; }
+        .message { margin-bottom: 23px; animation: appear .2s ease-out; }
+        @keyframes appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+        .message-header { margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; }
+        .user .message-header { color: #a78bfa; }
+        .assistant .message-header { color: var(--accent); }
+        .message-content {
+            padding: 14px 17px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--panel);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .user .message-content { background: #17172b; border-color: #38345b; }
+        .message-content.error { border-color: var(--red); color: #fecaca; }
+        .execution-log { margin: 12px 0 20px; overflow: hidden; border: 1px solid rgba(56,189,248,.25); border-radius: 9px; background: #070e19; }
+        .log-title { display: flex; justify-content: space-between; padding: 11px 14px; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+        .log-title:hover { background: rgba(56,189,248,.06); }
+        .log-entries { max-height: 150px; overflow-y: auto; padding: 10px 14px; border-top: 1px solid var(--border); font: 11px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .log-entries[hidden] { display: none; }
+        .log-line { margin: 3px 0; color: #91a4bb; overflow-wrap: anywhere; }
+        .log-line::before { content: "> "; color: var(--accent); }
+        .typing { margin: 10px 0; color: var(--muted); font-size: 12px; }
+        footer { padding: 16px; border-radius: 0 0 12px 12px; }
+        .input-row { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; min-width: 0; padding: 13px 15px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: #080f1c; color: white; font-size: 14px; }
+        input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.12); }
+        button { border: 0; border-radius: 8px; padding: 0 22px; background: #0284c7; color: white; font-weight: 700; cursor: pointer; }
+        button:hover { background: #0369a1; }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        .settings { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 11px; }
+        .settings label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+        input[type="checkbox"] { accent-color: var(--accent); }
+        @media (max-width: 620px) {
+            body { padding: 8px; }
+            .app { height: calc(100vh - 16px); }
+            header { padding: 13px; }
+            #chat { padding: 15px; }
+            footer { padding: 11px; }
+            button { padding: 0 13px; }
+            .status { font-size: 9px; }
+        }
+    </style>
 </head>
 <body>
-  <div id="chat">RPAI připraven...</div>
-  <div class="input-box">
-    <input type="text" id="prompt" placeholder="Zadejte dotaz..." onkeydown="if(event.key==='Enter') send()">
-    <button onclick="send()">Odeslat</button>
-  </div>
-  <label><input type="checkbox" id="search" checked> Hledat na internetu</label>
+<div class="app">
+    <header>
+        <div class="brand">
+            <div class="brand-mark">J</div>
+            <div>
+                <h1>JARVIS</h1>
+                <div class="subtitle">PERSONAL ARTIFICIAL INTELLIGENCE</div>
+            </div>
+        </div>
+        <div class="status"><span class="status-dot"></span><span id="statusText">SYSTEM ONLINE</span></div>
+    </header>
 
-  <script>
-    async function send() {
-      const input = document.getElementById('prompt');
-      const box = document.getElementById('chat');
-      const useSearch = document.getElementById('search').checked;
-      if (!input.value.trim()) return;
+    <main id="chat" aria-live="polite">
+        <div class="welcome" id="welcome">
+            <h2>J.A.R.V.I.S.</h2>
+            <p>System initialized.</p>
+            <p>Waiting for your instructions.</p>
+        </div>
+    </main>
 
-      const userText = input.value;
-      input.value = '';
-      box.innerText += `\n\nTy: ${userText}\n\nRPAI: `;
+    <footer>
+        <div class="input-row">
+            <input id="prompt" type="text" placeholder="Enter a message or command..." autocomplete="off">
+            <button id="sendButton" type="button">Send</button>
+        </div>
+        <div class="settings">
+            <label><input id="search" type="checkbox"> Enable web search</label>
+            <span>LOCAL AI SYSTEM</span>
+        </div>
+    </footer>
+</div>
 
-      const res = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, use_search: useSearch })
-      });
+<script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("prompt");
+    const sendButton = document.getElementById("sendButton");
+    const statusText = document.getElementById("statusText");
+    let isProcessing = false;
+    const sessionId = "default";
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        for (const line of chunk.split('\n')) {
-          if (line.startsWith('data:')) {
-            box.innerText += line.replace('data:', '');
-            box.scrollTop = box.scrollHeight;
-          }
-        }
-      }
+    function scrollToBottom() {
+        chat.scrollTop = chat.scrollHeight;
     }
-  </script>
+
+    function createMessage(type, label, initialText = "") {
+        const wrapper = document.createElement("section");
+        wrapper.className = `message ${type}`;
+        const header = document.createElement("div");
+        header.className = "message-header";
+        header.textContent = label;
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.textContent = initialText;
+        wrapper.append(header, content);
+        chat.appendChild(wrapper);
+        scrollToBottom();
+        return content;
+    }
+
+    function createLog() {
+        const wrapper = document.createElement("section");
+        wrapper.className = "execution-log";
+        const title = document.createElement("div");
+        title.className = "log-title";
+        const label = document.createElement("span");
+        label.textContent = "JARVIS EXECUTION PROCESS";
+        const arrow = document.createElement("span");
+        arrow.textContent = "▼";
+        const entries = document.createElement("div");
+        entries.className = "log-entries";
+        title.append(label, arrow);
+        title.addEventListener("click", () => {
+            entries.hidden = !entries.hidden;
+            arrow.textContent = entries.hidden ? "▶" : "▼";
+        });
+        wrapper.append(title, entries);
+        chat.appendChild(wrapper);
+        return entries;
+    }
+
+    function addLog(container, text) {
+        const line = document.createElement("div");
+        line.className = "log-line";
+        line.textContent = text;
+        container.appendChild(line);
+        container.scrollTop = container.scrollHeight;
+        scrollToBottom();
+    }
+
+    function processSseBlock(block, state) {
+        let eventName = "message";
+        const data = [];
+        for (const line of block.split(/\r?\n/)) {
+            if (line.startsWith("event:")) eventName = line.slice(6).trim();
+            else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
+        }
+        if (data.length === 0) return;
+        const payload = data.join("\n");
+        if (eventName === "log") addLog(state.log, payload);
+        else if (eventName === "message") {
+            state.response.textContent += payload;
+            scrollToBottom();
+        } else if (eventName === "error") {
+            state.response.textContent += (state.response.textContent ? "\n\n" : "") + payload;
+            state.response.classList.add("error");
+            scrollToBottom();
+        }
+    }
+
+    async function send() {
+        const message = input.value.trim();
+        if (!message || isProcessing) return;
+
+        const welcome = document.getElementById("welcome");
+        if (welcome) welcome.remove();
+
+        input.value = "";
+        createMessage("user", "YOU", message);
+        const log = createLog();
+        const response = createMessage("assistant", "JARVIS");
+        const typing = document.createElement("div");
+        typing.className = "typing";
+        typing.textContent = "JARVIS is processing your request...";
+        chat.appendChild(typing);
+
+        isProcessing = true;
+        sendButton.disabled = true;
+        input.disabled = true;
+        sendButton.textContent = "Working...";
+        statusText.textContent = "PROCESSING";
+
+        try {
+            const httpResponse = await fetch("/api/chat/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message,
+                    session_id: sessionId,
+                    use_search: document.getElementById("search").checked
+                })
+            });
+
+            if (!httpResponse.ok) {
+                const body = await httpResponse.text();
+                throw new Error(`HTTP ${httpResponse.status}: ${body}`);
+            }
+            if (!httpResponse.body) throw new Error("Streaming response is unavailable.");
+
+            const reader = httpResponse.body.getReader();
+            const decoder = new TextDecoder();
+            const state = { log, response };
+            let buffer = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let separator;
+                while ((separator = /\r?\n\r?\n/.exec(buffer)) !== null) {
+                    const block = buffer.slice(0, separator.index);
+                    buffer = buffer.slice(separator.index + separator[0].length);
+                    processSseBlock(block, state);
+                }
+            }
+
+            buffer += decoder.decode();
+            if (buffer.trim()) processSseBlock(buffer, state);
+            if (!response.textContent.trim()) response.textContent = "The server returned an empty response.";
+        } catch (error) {
+            response.textContent += (response.textContent ? "\n\n" : "") + `Connection error: ${error.message}`;
+            response.classList.add("error");
+            addLog(log, `ERROR: ${error.message}`);
+        } finally {
+            typing.remove();
+            isProcessing = false;
+            sendButton.disabled = false;
+            input.disabled = false;
+            sendButton.textContent = "Send";
+            statusText.textContent = "SYSTEM ONLINE";
+            input.focus();
+            scrollToBottom();
+        }
+    }
+
+    sendButton.addEventListener("click", send);
+    input.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            send();
+        }
+    });
+    input.focus();
+</script>
 </body>
 </html>
