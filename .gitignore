@@ -1,8 +1,8 @@
-# Rust build files
+# Rust build output
 /target/
 **/*.rs.bk
 
-# SQLite database
+# Local SQLite databases and sidecar files
 /rpai.db
 /rpai.db-*
 *.sqlite
@@ -10,30 +10,30 @@
 *.db-wal
 *.db-shm
 
-# Environment variables and secrets
+# Environment files and secrets
 .env
 .env.*
 !.env.example
 
-# Logs
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Logs and temporary files
 *.log
 /logs/
-
-# IDE and editors
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Operating system
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Temporary files
 *.tmp
 *.bak
 *.old
 
-# Distribution
+# IDE and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Distribution output
 /dist/
