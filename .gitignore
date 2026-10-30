@@ -9,3 +9,7 @@
 # Database & Local Runtime
 *.db
 rpai.db
+
+# Local Runtime
+*.db
+rpai.db
